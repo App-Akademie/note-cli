@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+NOTES_DIR=".notes/db"
+
+usage() {
+  echo "Usage: note add <text> | note list | note delete <hash>" >&2
+  exit 1
+}
+
+hash_content() {
+  printf '%s' "$1" | shasum -a 256 | awk '{print $1}'
+}
+
+cmd_add() {
+  if [[ $# -eq 0 ]]; then
+    echo "error: note text required" >&2
+    exit 1
+  fi
+  local text="$*"
+  local hash
+  hash="$(hash_content "$text")"
+  mkdir -p "$NOTES_DIR"
+  printf '%s' "$text" >"$NOTES_DIR/$hash"
+  echo "$hash"
+}
+
+cmd_list() {
+  if [[ ! -d "$NOTES_DIR" ]]; then
+    return 0
+  fi
+  local file hash
+  for file in "$NOTES_DIR"/*; do
+    [[ -e "$file" ]] || continue
+    hash="$(basename "$file")"
+    printf '%s\t%s\n' "$hash" "$(cat "$file")"
+  done
+}
+
+cmd_delete() {
+  if [[ $# -eq 0 ]]; then
+    echo "error: hash required" >&2
+    exit 1
+  fi
+  local hash="$1"
+  local path="$NOTES_DIR/$hash"
+  if [[ ! -f "$path" ]]; then
+    echo "error: no note with hash $hash" >&2
+    exit 1
+  fi
+  rm "$path"
+}
+
+main() {
+  [[ $# -ge 1 ]] || usage
+
+  case "$1" in
+    add)
+      shift
+      cmd_add "$@"
+      ;;
+    list)
+      cmd_list
+      ;;
+    delete)
+      shift
+      cmd_delete "$@"
+      ;;
+    *)
+      usage
+      ;;
+  esac
+}
+
+main "$@"
