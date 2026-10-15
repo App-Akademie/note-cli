@@ -1,4 +1,4 @@
-name: Test CLI
+name: Test Windows CLI
 
 on: [push, pull_request, workflow_dispatch]
 
@@ -17,10 +17,6 @@ jobs:
             variant: pwsh
           - os: windows-latest
             variant: cmd
-          - os: ubuntu-latest
-            variant: bash
-          - os: ubuntu-latest
-            variant: pwsh
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

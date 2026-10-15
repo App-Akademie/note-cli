@@ -1,6 +1,13 @@
-# note-cli
+# note-cli — Windows
 
-Ein einfaches Kommandozeilen-Tool zum Speichern und Verwalten von Notizen, für Windows, macOS und Linux. Jede Notiz wird als eigene Datei unter `.notes/db/<hash>` abgelegt. `<hash>` ist der vollständige **SHA-256-Hash** des UTF-8-Inhalts. Identische Notizen belegen dadurch nur eine Datei.
+Ein natives Kommandozeilen-Tool zum Speichern und Verwalten von Notizen unter Windows. Jede Notiz wird als eigene Datei unter `.notes/db/<hash>` abgelegt. `<hash>` ist der vollständige **SHA-256-Hash** des UTF-8-Inhalts. Identische Notizen belegen dadurch nur eine Datei.
+
+Dieser Branch `windows` enthält `note.cmd` und `note.ps1`. Die Bash-Version für macOS und Linux liegt im Branch [`mac-linux`](https://github.com/App-Akademie/note-cli/tree/mac-linux).
+
+```powershell
+git clone --branch windows --single-branch https://github.com/App-Akademie/note-cli.git
+cd note-cli
+```
 
 ## Installation unter Windows
 
@@ -39,21 +46,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\note.ps1 add "Meine No
 pwsh -NoProfile -File .\note.ps1 list
 ```
 
-## Installation unter macOS / Linux
-
-Das Bash-Skript `note` benötigt `bash`, `shasum` und `awk`.
-
-```bash
-chmod +x note
-./note add "Einkaufsliste: Milch, Eier, Brot"
-```
-
-Optional das Skript in den `PATH` legen:
-
-```bash
-sudo ln -s "$(pwd)/note" /usr/local/bin/note
-```
-
 ## Verwendung
 
 ```text
@@ -62,7 +54,7 @@ note list
 note delete <hash>
 ```
 
-Alle Notizen werden **relativ zum aktuellen Arbeitsverzeichnis** unter `.notes/db/` gespeichert, nicht neben dem Skript. Das Verzeichnis wird beim ersten `add` automatisch angelegt. Beide Implementierungen verwenden dasselbe Dateiformat: UTF-8 ohne BOM und ohne zusätzlich angehängten Zeilenumbruch. Ein vorhandener `.notes`-Ordner kann zwischen den Betriebssystemen übernommen werden.
+Alle Notizen werden **relativ zum aktuellen Arbeitsverzeichnis** unter `.notes/db/` gespeichert, nicht neben dem Skript. Das Verzeichnis wird beim ersten `add` automatisch angelegt. Das Dateiformat ist mit der Bash-Version kompatibel: UTF-8 ohne BOM und ohne zusätzlich angehängten Zeilenumbruch. Ein vorhandener `.notes`-Ordner kann zwischen den Betriebssystemen übernommen werden.
 
 ### Notiz hinzufügen
 
@@ -96,9 +88,4 @@ $env:NOTE_CLI_VARIANT = 'powershell' # alternativ: pwsh oder cmd
 python -m unittest discover -s tests -v
 ```
 
-```bash
-NOTE_CLI_VARIANT=bash python3 -m unittest discover -s tests -v
-NOTE_CLI_VARIANT=pwsh python3 -m unittest discover -s tests -v
-```
-
-GitHub Actions prüft Windows PowerShell 5.1, PowerShell 7 und den CMD-Launcher auf Windows sowie Bash und PowerShell auf Linux. Ein erfolgreicher Windows-PowerShell-Lauf stellt außerdem das ZIP-Artefakt `note-cli-windows` bereit.
+GitHub Actions prüft Windows PowerShell 5.1, PowerShell 7 und den CMD-Launcher auf Windows. Ein erfolgreicher Windows-PowerShell-Lauf stellt außerdem das ZIP-Artefakt `note-cli-windows` bereit.

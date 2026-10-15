@@ -1,6 +1,6 @@
 """Integration tests for each CLI, using only Python's standard library.
 
-NOTE_CLI_VARIANT selects bash (default), powershell, pwsh, or cmd.
+NOTE_CLI_VARIANT selects powershell (default), pwsh, or cmd.
 POWERSHELL_EXE optionally supplies a portable PowerShell executable.
 """
 
@@ -14,7 +14,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VARIANT = os.environ.get("NOTE_CLI_VARIANT", "bash")
+VARIANT = os.environ.get("NOTE_CLI_VARIANT", "powershell")
 
 
 class NoteCliTests(unittest.TestCase):
@@ -24,16 +24,14 @@ class NoteCliTests(unittest.TestCase):
         self.cwd = Path(self.temp.name)
         self.db = self.cwd / ".notes" / "db"
         # Also exercise installation paths containing spaces and brackets.
-        self.install = self.cwd / "tool [windows version]"
+        self.install = self.cwd / "tool [installed]"
         self.install.mkdir()
-        for name in ("note", "note.ps1", "note.cmd"):
+        for name in ("note.ps1", "note.cmd"):
             shutil.copy2(ROOT / name, self.install / name)
 
     def run_cli(self, *args, variant=None):
         variant = variant or VARIANT
-        if variant == "bash":
-            command = ["bash", str(self.install / "note"), *args]
-        elif variant in ("powershell", "pwsh"):
+        if variant in ("powershell", "pwsh"):
             command = [os.environ.get("POWERSHELL_EXE", variant), "-NoLogo",
                        "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
                        "-File", str(self.install / "note.ps1"), *args]
@@ -138,7 +136,6 @@ class NoteCliTests(unittest.TestCase):
         self.assertIn("no note with hash", result.stderr)
         self.assertFalse(self.db.exists())
 
-    @unittest.skipIf(VARIANT == "bash", "Hash validation belongs to the new Windows CLI")
     def test_delete_rejects_paths_wildcards_and_short_hashes(self):
         note_hash = self.add("keep this note")
         sentinel = self.cwd / ".notes" / "sentinel"
@@ -151,28 +148,6 @@ class NoteCliTests(unittest.TestCase):
         self.assertTrue((self.db / note_hash).exists())
         self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep this file")
 
-    @unittest.skipIf(os.name == "nt", "Cross-platform format check runs on Unix")
-    def test_bash_and_powershell_share_notes(self):
-        executable = os.environ.get("POWERSHELL_EXE", "pwsh")
-        if not shutil.which(executable):
-            self.skipTest("PowerShell is not installed")
-        text = "shared UTF-8: caf\u00e9"
-        note_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
-        result = self.run_cli("add", text, variant="bash")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        result = self.run_cli("list", variant="pwsh")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout, note_hash + "\t" + text + "\n")
-        result = self.run_cli("delete", note_hash, variant="pwsh")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        result = self.run_cli("add", text, variant="pwsh")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        result = self.run_cli("list", variant="bash")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout, note_hash + "\t" + text + "\n")
-        result = self.run_cli("delete", note_hash, variant="bash")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertFalse((self.db / note_hash).exists())
 
 
 if __name__ == "__main__":
