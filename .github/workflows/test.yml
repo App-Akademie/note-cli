@@ -1,0 +1,43 @@
+name: Test CLI
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            variant: powershell
+          - os: windows-latest
+            variant: pwsh
+          - os: windows-latest
+            variant: cmd
+          - os: ubuntu-latest
+            variant: bash
+          - os: ubuntu-latest
+            variant: pwsh
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Test ${{ matrix.variant }}
+        env:
+          NOTE_CLI_VARIANT: ${{ matrix.variant }}
+        run: python -m unittest discover -s tests -v
+      - name: Package Windows scripts
+        if: matrix.variant == 'powershell'
+        uses: actions/upload-artifact@v4
+        with:
+          name: note-cli-windows
+          path: |
+            note.cmd
+            note.ps1
+            README.md
+          if-no-files-found: error

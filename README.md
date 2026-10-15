@@ -1,16 +1,54 @@
 # note-cli
 
-Ein einfaches Kommandozeilen-Tool zum Speichern und Verwalten von Notizen. Jede Notiz wird als eigene Datei unter `.notes/db/<hash>` abgelegt, wobei `<hash>` der SHA1-Hash des Inhalts ist (analog zu Git-Blobs). Dadurch werden identische Notizen automatisch dedupliziert.
+Ein einfaches Kommandozeilen-Tool zum Speichern und Verwalten von Notizen, für Windows, macOS und Linux. Jede Notiz wird als eigene Datei unter `.notes/db/<hash>` abgelegt. `<hash>` ist der vollständige **SHA-256-Hash** des UTF-8-Inhalts. Identische Notizen belegen dadurch nur eine Datei.
 
-## Installation
+## Installation unter Windows
 
-`note-cli` ist ein einzelnes Bash-Skript ohne Abhängigkeiten (außer `bash`, `sha1sum`/`shasum` und `awk`, die auf den meisten Systemen bereits vorhanden sind).
+Benötigt Windows PowerShell 5.1 (auf Windows 10/11 bereits enthalten). Weder WSL noch Git Bash oder zusätzliche Pakete sind nötig.
+
+1. Dieses Repository herunterladen und entpacken oder mit Git klonen.
+2. `note.cmd` und `note.ps1` im selben Ordner behalten.
+3. Ein Terminal in diesem Ordner öffnen.
+
+In PowerShell:
+
+```powershell
+.\note.cmd add "Einkaufsliste: Milch, Eier, Brot"
+.\note.cmd list
+.\note.cmd delete <hash>
+```
+
+In der Eingabeaufforderung (`cmd.exe`):
+
+```bat
+note.cmd add "Einkaufsliste: Milch, Eier, Brot"
+note.cmd list
+note.cmd delete <hash>
+```
+
+`<hash>` durch den vollständigen Hash aus `add` oder `list` ersetzen (ohne spitze Klammern). Text mit Leerzeichen oder Shell-Sonderzeichen in Anführungszeichen setzen.
+
+Optional den Ordner mit beiden Dateien zum Benutzer-`PATH` hinzufügen. Danach ist `note` in einem neu geöffneten Terminal von überall aufrufbar.
+
+`note.cmd` startet Windows PowerShell mit `-NoProfile` und einer nur für diesen Prozess geltenden Ausführungsrichtlinie. Es verändert keine systemweite Einstellung. Organisationsrichtlinien können weiterhin die Skriptausführung einschränken. Bei einer heruntergeladenen ZIP gegebenenfalls vor dem Entpacken in den Dateieigenschaften „Zulassen“ aktivieren.
+
+Alternativ lässt sich das Skript direkt mit Windows PowerShell oder PowerShell 7 ausführen:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\note.ps1 add "Meine Notiz"
+pwsh -NoProfile -File .\note.ps1 list
+```
+
+## Installation unter macOS / Linux
+
+Das Bash-Skript `note` benötigt `bash`, `shasum` und `awk`.
 
 ```bash
 chmod +x note
+./note add "Einkaufsliste: Milch, Eier, Brot"
 ```
 
-Optional das Skript in den `PATH` legen, damit es überall aufrufbar ist:
+Optional das Skript in den `PATH` legen:
 
 ```bash
 sudo ln -s "$(pwd)/note" /usr/local/bin/note
@@ -18,56 +56,49 @@ sudo ln -s "$(pwd)/note" /usr/local/bin/note
 
 ## Verwendung
 
-```
+```text
 note add <text>
 note list
 note delete <hash>
 ```
 
-Alle Notizen werden relativ zum aktuellen Arbeitsverzeichnis unter `.notes/db/` gespeichert – das Verzeichnis wird bei Bedarf automatisch angelegt.
+Alle Notizen werden **relativ zum aktuellen Arbeitsverzeichnis** unter `.notes/db/` gespeichert, nicht neben dem Skript. Das Verzeichnis wird beim ersten `add` automatisch angelegt. Beide Implementierungen verwenden dasselbe Dateiformat: UTF-8 ohne BOM und ohne zusätzlich angehängten Zeilenumbruch. Ein vorhandener `.notes`-Ordner kann zwischen den Betriebssystemen übernommen werden.
 
 ### Notiz hinzufügen
 
-```bash
-./note add Einkaufsliste: Milch, Eier, Brot
+`add` verbindet seine Textargumente mit Leerzeichen und gibt ausschließlich den 64-stelligen Hash aus:
+
+```text
+note add hello
+2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
 ```
 
-Ausgabe:
-
-```
-Notiz gespeichert: a1b2c3d4e5f6...
-```
-
-Wird derselbe Text erneut hinzugefügt, erkennt `note-cli` den bereits vorhandenen Hash und legt keine Duplikat-Datei an:
-
-```
-Notiz existiert bereits: a1b2c3d4e5f6...
-```
+Derselbe Text ergibt denselben Hash und überschreibt dieselbe Datei. Es wird keine zusätzliche Notiz erzeugt.
 
 ### Notizen auflisten
 
-```bash
-./note list
-```
-
-Zeigt alle gespeicherten Notizen mit ihrem Hash und Inhalt:
-
-```
-a1b2c3d4e5f6...  Einkaufsliste: Milch, Eier, Brot
-```
-
-Sind keine Notizen vorhanden, wird `Keine Notizen vorhanden.` ausgegeben.
+`list` gibt pro Datei den Hash, einen Tabulator und den Inhalt aus. Ohne Notizen bleibt die Ausgabe leer.
 
 ### Notiz löschen
 
+```text
+note delete 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+```
+
+Ein erfolgreiches `delete` hat keine Ausgabe. Unter Windows werden nur vollständige, kleingeschriebene SHA-256-Hashes akzeptiert. Fehler werden auf stderr ausgegeben und liefern Exitcode 1; erfolgreiche Befehle liefern Exitcode 0.
+
+## Tests
+
+Die Integrationstests benötigen nur Python 3. Sie arbeiten in temporären Ordnern und prüfen Speichern, Auflisten, Deduplizierung, Löschen, Unicode, Sonderzeichen und Fehlerfälle.
+
+```powershell
+$env:NOTE_CLI_VARIANT = 'powershell' # alternativ: pwsh oder cmd
+python -m unittest discover -s tests -v
+```
+
 ```bash
-./note delete a1b2c3d4e5f6...
+NOTE_CLI_VARIANT=bash python3 -m unittest discover -s tests -v
+NOTE_CLI_VARIANT=pwsh python3 -m unittest discover -s tests -v
 ```
 
-Der Hash muss dabei nicht vollständig sein wie bei Git-Kurzhashes – hier ist der komplette Hash aus `note list` bzw. `note add` erforderlich.
-
-Ausgabe:
-
-```
-Notiz gelöscht: a1b2c3d4e5f6...
-```
+GitHub Actions prüft Windows PowerShell 5.1, PowerShell 7 und den CMD-Launcher auf Windows sowie Bash und PowerShell auf Linux. Ein erfolgreicher Windows-PowerShell-Lauf stellt außerdem das ZIP-Artefakt `note-cli-windows` bereit.
